@@ -1,0 +1,130 @@
+PACKAGES and cursors and procedures
+
+CREATE OR REPLACE 
+PACKAGE RATINGP AS 
+PROCEDURE INSERT_RATING(u_id in rating.user_id%type , anim_id in rating.anime_id%type , rat in rating.rating%type) ;
+PROCEDURE UPDATE_RATING(u_id in rating.user_id%type , anim_id in rating.anime_id%type , rat in rating.rating%type);
+  /* TODO enter package declarations (types, exceptions, methods etc) here */ 
+
+END RATINGP;
+
+create or replace PACKAGE body ratingP as
+PROCEDURE INSERT_RATING(u_id in rating.user_id%type , anim_id in rating.anime_id%type , rat in rating.rating%type) as
+begin
+declare 
+cursor ifex(u_id in rating.user_id%type , anim_id in rating.anime_id%type) is  select count(1) from rating where user_id = u_id and anime_id = anim_id;
+n_count number;
+BEGIN
+open ifex(u_id,anim_id);
+fetch ifex into n_count;
+close ifex;
+if n_count = 0 then 
+insert into rating values(u_id,anim_id,rat);
+else
+update_rating(u_id,anim_id,rat);
+end if;
+end;
+END INSERT_RATING;
+PROCEDURE UPDATE_RATING(u_id in rating.user_id%type , anim_id in rating.anime_id%type , rat in rating.rating%type) AS 
+BEGIN
+  update rating set rating = rat where user_id = u_id and anime_id = anim_id;
+END UPDATE_RATING;
+end ratingP;
+
+
+CREATE OR REPLACE 
+PACKAGE USERSP AS 
+ procedure regUser(userN in users.username%TYPE, pass in users.password%type);
+ procedure logUser(userN in users.username%type);
+  /* TODO enter package declarations (types, exceptions, methods etc) here */ 
+
+END USERSP;
+
+
+create or replace package body usersp as
+ procedure regUser(userN in users.username%TYPE, pass in users.password%type) as 
+begin
+declare 
+cursor ifex(userN in users.username%TYPE) is  select count(1) from users where username = userN;
+n_count number;
+n_isEmpty number;
+begin 
+open ifex(userN);
+fetch ifex into n_count;
+close ifex;
+select  count(1) into n_isEmpty from users;
+if n_isEmpty = 0 then 
+insert into users values(0,userN,pass) ;
+
+elsif n_count = 0 then
+insert into users values(userseq.nextval,userN,pass);
+
+end if;
+
+end;
+end regUser;
+function logUser(userN in users.username%type, pass in users.password%type) return number  as
+ begin
+ declare
+ cursor ifex(userN in users.username%TYPE) is  select count(1) from users where username = userN and password = pass;
+ n_count number;
+ begin
+ open ifex(userN);
+ fetch ifex into n_count;
+ close ifex;
+ if n_count > 0 then return 1;
+ else return 0;
+ end if;
+ end;
+
+ end logUser;
+ end usersp;
+
+record Type
+create or replace TYPE anime_demo AS OBJECT
+    ( mal_id        NUMBER(38,0)
+    , name    VARCHAR2(128)
+    , score     VARCHAR2(26)
+    , genders       VARCHAR2(128)
+    , english_name      VARCHAR2(128)
+    , type      VARCHAR2(26)
+    ,episodes      VARCHAR2(26)
+    , aired        VARCHAR2(128)
+    , premiered         VARCHAR2(26)
+    , producers       VARCHAR2(256)
+    , licenors   VARCHAR2(128)
+    ,studious VARCHAR2(128)
+    , source varchar(26)
+    ,duration varchar(26)
+    ,rating VARCHAR2(128)
+    ) ;
+
+sequnces   CREATE SEQUENCE  "HR"."USERSEQ"  MINVALUE 0 MAXVALUE 500 INCREMENT BY 1 START WITH 21 CACHE 20 NOORDER  NOCYCLE ;
+functions
+CREATE OR REPLACE FUNCTION ALLREV(ida in rating.anime_id%type) RETURN varchar2 AS 
+begin
+declare
+cursor supercursor is select rating from rating where anime_id = ida;
+r rating.rating%type;
+n_count number;
+new_s  NUMBER(38,2) :=0;
+BEGIN
+select count(50000) into n_count from rating where anime_id = ida;
+open supercursor;
+loop
+FETCH supercursor into r; 
+new_s := new_s + r;
+exit when supercursor%NOTFOUND;
+end loop;
+close supercursor;
+
+  RETURN to_char(round((new_s/n_count) , 2));
+  end;
+END ALLREV;
+
+trigger
+CREATE OR REPLACE TRIGGER USER_UPDATE 
+after insert or UPDATE ON rating  
+BEGIN
+update users set review_num = review_num+1;
+END;
